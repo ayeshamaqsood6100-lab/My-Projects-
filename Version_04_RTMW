@@ -1,0 +1,196 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "mount_file_id": "1cfHZRqs3aA8ABN1vmbMQBPQDwh5zgRav",
+      "authorship_tag": "ABX9TyPWAG8jNEOQ8OjjiPCT3H2V",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/ayeshamaqsood6100-lab/My-Projects-/blob/main/Version_04_RTMW\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 2,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "HCahc3fjXZf8",
+        "outputId": "bc8a319c-b23c-4471-958d-a5b5c5779fbb"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Drive already mounted at /content/drive; to attempt to forcibly remount, call drive.mount(\"/content/drive\", force_remount=True).\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m51.5/51.5 kB\u001b[0m \u001b[31m2.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m300.5/300.5 MB\u001b[0m \u001b[31m4.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m72.9/72.9 MB\u001b[0m \u001b[31m10.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m16.4/16.4 MB\u001b[0m \u001b[31m97.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m17.4/17.4 MB\u001b[0m \u001b[31m79.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m79.2/79.2 MB\u001b[0m \u001b[31m8.3 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m46.0/46.0 kB\u001b[0m \u001b[31m2.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m86.8/86.8 kB\u001b[0m \u001b[31m4.6 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25h\u001b[31mERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\n",
+            "tensorflow 2.19.0 requires numpy<2.2.0,>=1.26.0, but you have numpy 2.4.1 which is incompatible.\n",
+            "opencv-python-headless 4.12.0.88 requires numpy<2.3.0,>=2; python_version >= \"3.9\", but you have numpy 2.4.1 which is incompatible.\n",
+            "numba 0.60.0 requires numpy<2.1,>=1.22, but you have numpy 2.4.1 which is incompatible.\u001b[0m\u001b[31m\n",
+            "\u001b[0mSTEP 1: Re-encoding video...\n",
+            "\n",
+            "STEP 2: Running AI (Upper Body Only)...\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "Downloading: \"https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/onnx_sdk/yolox_m_8xb8-300e_humanart-c2c7a14a.zip\" to /root/.cache/rtmlib/hub/checkpoints/yolox_m_8xb8-300e_humanart-c2c7a14a.zip\n",
+            "100%|██████████| 89.9M/89.9M [00:06<00:00, 14.9MB/s]\n",
+            "/usr/local/lib/python3.12/dist-packages/onnxruntime/capi/onnxruntime_inference_collection.py:123: UserWarning: Specified provider 'CUDAExecutionProvider' is not in available provider names.Available providers: 'AzureExecutionProvider, CPUExecutionProvider'\n",
+            "  warnings.warn(\n",
+            "Downloading: \"https://download.openmmlab.com/mmpose/v1/projects/rtmw/onnx_sdk/rtmw-dw-x-l_simcc-cocktail14_270e-384x288_20231122.zip\" to /root/.cache/rtmlib/hub/checkpoints/rtmw-dw-x-l_simcc-cocktail14_270e-384x288_20231122.zip\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "load /root/.cache/rtmlib/hub/checkpoints/yolox_m_8xb8-300e_humanart-c2c7a14a.onnx with onnxruntime backend\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "100%|██████████| 204M/204M [00:13<00:00, 15.8MB/s]\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "load /root/.cache/rtmlib/hub/checkpoints/rtmw-dw-x-l_simcc-cocktail14_270e-384x288_20231122.onnx with onnxruntime backend\n",
+            "Processed frame 10/120\n",
+            "Processed frame 20/120\n",
+            "Processed frame 30/120\n",
+            "Processed frame 40/120\n",
+            "Processed frame 50/120\n",
+            "Processed frame 60/120\n",
+            "Processed frame 70/120\n",
+            "Processed frame 80/120\n",
+            "Processed frame 90/120\n",
+            "Processed frame 100/120\n",
+            "Processed frame 110/120\n",
+            "Processed frame 120/120\n",
+            "\n",
+            "STEP 3: Saving to Drive...\n",
+            "SUCCESS! Video saved to: /content/drive/MyDrive/ConnectHearTestVideos/Bandbaja_FINAL.mp4\n"
+          ]
+        }
+      ],
+      "source": [
+        "# 1. Mount Drive\n",
+        "from google.colab import drive\n",
+        "drive.mount('/content/drive')\n",
+        "\n",
+        "# 2. Install Library\n",
+        "!pip install rtmlib onnxruntime-gpu opencv-python -q\n",
+        "import numpy as np\n",
+        "import os\n",
+        "import shutil\n",
+        "import cv2\n",
+        "from rtmlib import Wholebody, draw_skeleton\n",
+        "\n",
+        "# --- PATHS ---\n",
+        "original_video = '/content/drive/MyDrive/ConnectHearTestVideos/Bandbaja.mp4'\n",
+        "clean_input = '/content/clean_input.mp4'\n",
+        "clean_output = '/content/clean_output.mp4'\n",
+        "final_dest = '/content/drive/MyDrive/ConnectHearTestVideos/Bandbaja_FINAL.mp4'\n",
+        "\n",
+        "# --- STEP 1: CLEAN THE VIDEO ---\n",
+        "print(\"STEP 1: Re-encoding video...\")\n",
+        "if not os.path.exists(original_video):\n",
+        "    print(f\"CRITICAL ERROR: Cannot find video at {original_video}\")\n",
+        "else:\n",
+        "    os.system(f'ffmpeg -y -i \"{original_video}\" -c:v libx264 -preset fast -crf 22 \"{clean_input}\" -loglevel error')\n",
+        "\n",
+        "# --- STEP 2: RUN AI ---\n",
+        "print(\"\\nSTEP 2: Running AI (Upper Body Only)...\")\n",
+        "\n",
+        "device = 'cuda'\n",
+        "model = Wholebody(to_openpose=False, mode='performance', backend='onnxruntime', device=device)\n",
+        "\n",
+        "cap = cv2.VideoCapture(clean_input)\n",
+        "width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))\n",
+        "height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))\n",
+        "fps = cap.get(cv2.CAP_PROP_FPS)\n",
+        "frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))\n",
+        "\n",
+        "fourcc = cv2.VideoWriter_fourcc(*'mp4v')\n",
+        "out = cv2.VideoWriter(clean_output, fourcc, fps, (width, height))\n",
+        "\n",
+        "count = 0\n",
+        "\n",
+        "while cap.isOpened():\n",
+        "    ret, frame = cap.read()\n",
+        "    if not ret:\n",
+        "        break\n",
+        "\n",
+        "    # AI Inference\n",
+        "    keypoints, scores = model(frame)\n",
+        "\n",
+        "    # --- FIX PART 1: SINGLE PERSON FILTER ---\n",
+        "    if len(keypoints) > 0:\n",
+        "        avg_scores = [np.mean(s) for s in scores]\n",
+        "        best_idx = np.argmax(avg_scores)\n",
+        "        keypoints = keypoints[best_idx:best_idx+1]\n",
+        "        scores = scores[best_idx:best_idx+1]\n",
+        "\n",
+        "        # --- FIX PART 2: REMOVE LEGS ---\n",
+        "        # Scores set to 0.0 for Knees (13,14) and Ankles (15,16)\n",
+        "        scores[:, 13:17] = 0.0\n",
+        "\n",
+        "    # --- DRAWING SETTINGS ---\n",
+        "    # Changed line_width and radius from 1 to 2\n",
+        "    # You can change these to 3 or 4 if you want them very thick.\n",
+        "    img_show = draw_skeleton(frame, keypoints, scores, kpt_thr=0.5, line_width=2, radius=2)\n",
+        "\n",
+        "    out.write(img_show)\n",
+        "    count += 1\n",
+        "    if count % 10 == 0:\n",
+        "        print(f\"Processed frame {count}/{frame_count}\")\n",
+        "\n",
+        "cap.release()\n",
+        "out.release()\n",
+        "\n",
+        "# --- STEP 3: SAVE TO DRIVE ---\n",
+        "print(\"\\nSTEP 3: Saving to Drive...\")\n",
+        "if os.path.exists(clean_output) and os.path.getsize(clean_output) > 0:\n",
+        "    shutil.copy(clean_output, final_dest)\n",
+        "    print(f\"SUCCESS! Video saved to: {final_dest}\")\n",
+        "else:\n",
+        "    print(\"FAILURE: Output file empty.\")\n"
+      ]
+    }
+  ]
+}
