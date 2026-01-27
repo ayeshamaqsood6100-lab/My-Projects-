@@ -1,0 +1,191 @@
+# @title 🌊 Sapiens DEPTH (Standalone)
+# ============================================================================
+# Creates depth video with human-only masking (black background)
+# Requires segmentation masks OR will create them on-the-fly
+# ============================================================================
+
+import os, sys, subprocess, cv2, numpy as np, gc
+from tqdm import tqdm
+
+print("🔧 Installing...")
+subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "torch", "huggingface_hub", "opencv-python", "tqdm"])
+
+import torch
+from huggingface_hub import hf_hub_download
+
+# ============================================================================
+# SETUP
+# ============================================================================
+try:
+    from google.colab import drive
+    if not os.path.exists('/content/drive'):
+        drive.mount('/content/drive')
+    print("✅ Google Drive mounted!")
+    IN_COLAB = True
+except:
+    IN_COLAB = False
+
+# CONFIG
+VIDEO_FILENAME = "Brother.mp4"
+BASE_PATH = "/content/drive/MyDrive/ConnectHearTestVideos" if IN_COLAB else "."
+MODEL_DIR = "/content/sapiens_models" if IN_COLAB else "./sapiens_models"
+os.makedirs(MODEL_DIR, exist_ok=True)
+
+RAW_INPUT = os.path.join(BASE_PATH, VIDEO_FILENAME)
+CLEAN_INPUT = "/content/cleaned_input.mp4"
+OUTPUT_DEPTH = os.path.join(BASE_PATH, f"DEPTH_{VIDEO_FILENAME}")
+
+# Check input
+print(f"\n🔍 Input: {RAW_INPUT}")
+if not os.path.exists(RAW_INPUT):
+    print(f"❌ ERROR: File not found!")
+    sys.exit(1)
+
+# Repair video
+print("🔧 Preparing video...")
+subprocess.run(f'ffmpeg -y -loglevel error -i "{RAW_INPUT}" -c:v libx264 -preset fast -crf 22 "{CLEAN_INPUT}"', shell=True)
+
+# Get video info
+cap = cv2.VideoCapture(CLEAN_INPUT)
+total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+fps = cap.get(cv2.CAP_PROP_FPS) or 30
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+width, height = (width // 2) * 2, (height // 2) * 2
+cap.release()
+
+print(f"   Video: {width}x{height}, {total_frames} frames, {fps:.1f} fps")
+
+# ============================================================================
+# DOWNLOAD MODELS
+# ============================================================================
+print("\n📦 Downloading models...")
+
+# Segmentation (for masks)
+SEG_MODEL_PATH = hf_hub_download(
+    repo_id="facebook/sapiens-seg-1b-torchscript",
+    filename="sapiens_1b_goliath_best_goliath_mIoU_7994_epoch_151_torchscript.pt2",
+    local_dir=MODEL_DIR
+)
+
+# Depth
+DEPTH_MODEL_PATH = hf_hub_download(
+    repo_id="facebook/sapiens-depth-1b-torchscript",
+    filename="sapiens_1b_render_people_epoch_88_torchscript.pt2",
+    local_dir=MODEL_DIR
+)
+
+print("✅ Models downloaded")
+
+# ============================================================================
+# LOAD MODELS
+# ============================================================================
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f"\n🎮 Device: {device}")
+
+print("🔄 Loading Segmentation (for masks)...")
+seg_model = torch.jit.load(SEG_MODEL_PATH, map_location=device).eval()
+
+print("🔄 Loading Depth...")
+depth_model = torch.jit.load(DEPTH_MODEL_PATH, map_location=device).eval()
+
+print("✅ All models loaded")
+
+# ============================================================================
+# PREPROCESSING
+# ============================================================================
+def preprocess(img):
+    img = cv2.resize(img, (768, 1024))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+    img = (img - [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
+    return torch.from_numpy(img.transpose(2, 0, 1)).unsqueeze(0).float()
+
+# ============================================================================
+# PROCESS VIDEO
+# ============================================================================
+print("\n🏃 Processing...")
+
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+out = cv2.VideoWriter("/content/temp_depth.mp4", fourcc, fps, (width, height))
+
+cap = cv2.VideoCapture(CLEAN_INPUT)
+
+with tqdm(total=total_frames, desc="Depth") as pbar:
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        frame = cv2.resize(frame, (width, height))
+        tensor = preprocess(frame).to(device)
+        
+        # Get segmentation mask (SMOOTH edges to avoid blocky artifacts)
+        with torch.no_grad():
+            seg_out = seg_model(tensor)
+        seg_logits = (seg_out[0] if isinstance(seg_out, tuple) else seg_out)[0].cpu().numpy()
+        seg_map = np.argmax(seg_logits, axis=0)
+        
+        # Smooth mask resizing (INTER_LINEAR instead of NEAREST)
+        mask_lowres = (seg_map > 0).astype(np.uint8) * 255
+        mask = cv2.resize(mask_lowres, (width, height), interpolation=cv2.INTER_LINEAR)
+        mask = (mask > 127).astype(np.uint8) * 255  # Threshold back to binary
+        mask = cv2.GaussianBlur(mask, (5, 5), 0)  # Smooth edges
+        
+        # Get depth
+        with torch.no_grad():
+            depth_out = depth_model(tensor)
+        depth = (depth_out[0] if isinstance(depth_out, tuple) else depth_out)[0, 0].cpu().numpy()
+        depth = cv2.resize(depth, (width, height), interpolation=cv2.INTER_LINEAR)
+        
+        # Mask depth
+        depth[mask == 0] = 0
+        
+        # Normalize human region (INVERTED: face=close=warm)
+        human = depth[mask > 0]
+        if len(human) > 0:
+            d_min, d_max = human.min(), human.max()
+            if d_max > d_min:
+                depth_norm = ((d_max - depth) / (d_max - d_min) * 255).astype(np.uint8)
+            else:
+                depth_norm = np.zeros((height, width), dtype=np.uint8)
+        else:
+            depth_norm = np.zeros((height, width), dtype=np.uint8)
+        
+        # Apply colormap
+        depth_colored = cv2.applyColorMap(depth_norm, cv2.COLORMAP_INFERNO)
+        
+        # Black background
+        depth_final = np.where(mask[:,:,None] > 0, depth_colored, 0)
+        
+        out.write(depth_final)
+        pbar.update(1)
+
+cap.release()
+out.release()
+
+# Cleanup models
+del seg_model, depth_model
+gc.collect()
+if device == 'cuda':
+    torch.cuda.empty_cache()
+
+# ============================================================================
+# FINALIZE
+# ============================================================================
+print("\n🔄 Encoding...")
+subprocess.run(f'ffmpeg -y -loglevel error -i "/content/temp_depth.mp4" -c:v libx264 -pix_fmt yuv420p "{OUTPUT_DEPTH}"', shell=True)
+
+# Cleanup
+if os.path.exists("/content/temp_depth.mp4"):
+    os.remove("/content/temp_depth.mp4")
+if os.path.exists(CLEAN_INPUT):
+    os.remove(CLEAN_INPUT)
+
+print("\n" + "="*60)
+print("✅ SUCCESS!")
+print("="*60)
+print(f"\n📁 Output: {OUTPUT_DEPTH}")
+print("\n✅ Features:")
+print("   • Depth inverted (face=warm/close)")
+print("   • Human-only (black background)")
+print("   • Uses Sapiens 1B (best quality)")
