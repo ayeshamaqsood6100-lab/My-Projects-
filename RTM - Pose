@@ -1,0 +1,137 @@
+# @title 🎯 RTMLib POSE (Standalone)
+# ============================================================================
+# RTMLib Wholebody - 133 keypoints with accurate pose tracking
+# ============================================================================
+
+import os, sys, subprocess, cv2, numpy as np, gc
+from tqdm import tqdm
+
+print("🔧 Installing...")
+subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "rtmlib", "onnxruntime-gpu", "opencv-python", "tqdm"])
+
+from rtmlib import Wholebody, draw_skeleton
+
+# ============================================================================
+# SETUP
+# ============================================================================
+try:
+    from google.colab import drive
+    if not os.path.exists('/content/drive'):
+        drive.mount('/content/drive')
+    print("✅ Google Drive mounted!")
+    IN_COLAB = True
+except:
+    IN_COLAB = False
+
+# CONFIG
+VIDEO_FILENAME = "DTQA.mp4"
+BASE_PATH = "/content/drive/MyDrive/ConnectHearTestVideos" if IN_COLAB else "."
+
+RAW_INPUT = os.path.join(BASE_PATH, VIDEO_FILENAME)
+CLEAN_INPUT = "/content/cleaned_input.mp4"
+OUTPUT_POSE = os.path.join(BASE_PATH, f"POSE_{VIDEO_FILENAME}")
+
+# RTMLib settings
+POSE_THRESHOLD = 0.6  # Increased to reduce flicker
+LINE_WIDTH = 2
+RADIUS = 2
+
+# Check input
+print(f"\n🔍 Input: {RAW_INPUT}")
+if not os.path.exists(RAW_INPUT):
+    print(f"❌ ERROR: File not found!")
+    sys.exit(1)
+
+# Repair video
+print("🔧 Preparing video...")
+subprocess.run(f'ffmpeg -y -loglevel error -i "{RAW_INPUT}" -c:v libx264 -preset fast -crf 22 "{CLEAN_INPUT}"', shell=True)
+
+# Get video info
+cap = cv2.VideoCapture(CLEAN_INPUT)
+total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+fps = cap.get(cv2.CAP_PROP_FPS) or 30
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+width, height = (width // 2) * 2, (height // 2) * 2
+cap.release()
+
+print(f"   Video: {width}x{height}, {total_frames} frames, {fps:.1f} fps")
+
+# ============================================================================
+# LOAD MODEL
+# ============================================================================
+device = 'cuda' if True else 'cpu'  # RTMLib uses ONNX with GPU
+print(f"\n🎮 Device: {device}")
+
+print("🔄 Loading RTMLib Wholebody...")
+pose_model = Wholebody(to_openpose=False, mode='performance', backend='onnxruntime', device=device)
+print("✅ Model loaded")
+
+# ============================================================================
+# PROCESS VIDEO
+# ============================================================================
+print("\n🏃 Processing...")
+
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+out = cv2.VideoWriter("/content/temp_pose.mp4", fourcc, fps, (width, height))
+
+cap = cv2.VideoCapture(CLEAN_INPUT)
+
+with tqdm(total=total_frames, desc="Pose") as pbar:
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        frame = cv2.resize(frame, (width, height))
+        
+        # Get pose
+        keypoints, scores = pose_model(frame)
+        
+        # Single person filter (best detected person)
+        if len(keypoints) > 0:
+            avg_scores = [np.mean(s) for s in scores]
+            best_idx = np.argmax(avg_scores)
+            keypoints = keypoints[best_idx:best_idx+1]
+            scores = scores[best_idx:best_idx+1]
+            
+            # REMOVE LOWER BODY: Knees (13,14), Ankles (15,16), Feet (17-22)
+            scores[:, 13:23] = 0.0
+        
+        # Draw pose using RTMLib's draw_skeleton
+        pose_frame = draw_skeleton(frame.copy(), keypoints, scores,
+                                   kpt_thr=POSE_THRESHOLD,
+                                   line_width=LINE_WIDTH,
+                                   radius=RADIUS)
+        
+        out.write(pose_frame)
+        pbar.update(1)
+
+cap.release()
+out.release()
+
+# Cleanup
+del pose_model
+gc.collect()
+
+# ============================================================================
+# FINALIZE
+# ============================================================================
+print("\n🔄 Encoding...")
+subprocess.run(f'ffmpeg -y -loglevel error -i "/content/temp_pose.mp4" -c:v libx264 -pix_fmt yuv420p "{OUTPUT_POSE}"', shell=True)
+
+# Cleanup
+if os.path.exists("/content/temp_pose.mp4"):
+    os.remove("/content/temp_pose.mp4")
+if os.path.exists(CLEAN_INPUT):
+    os.remove(CLEAN_INPUT)
+
+print("\n" + "="*60)
+print("✅ SUCCESS!")
+print("="*60)
+print(f"\n📁 Output: {OUTPUT_POSE}")
+print("\n✅ Features:")
+print("   • RTMLib Wholebody - 133 keypoints")
+print("   • Clean face mesh with proper jawline")
+print("   • Reliable hand tracking")
+print("   • Lower body removed (knees + ankles hidden)")
